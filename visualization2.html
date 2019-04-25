@@ -1,0 +1,146 @@
+<html>
+<head>
+    <style>
+        body {
+            font-family: Folio, Arial, sans-serif
+        }
+        h2 {
+            background-color: #07c8ef;
+            color: black;
+            padding: 5px;
+        }
+        h2.received {
+            background-color: #cc7bf2;
+            color: black;
+            padding: 5px;
+        }
+        h2.donated {
+            background-color: #f97277;
+            color: black;
+            padding: 5px;
+        }
+        svg{
+            border: 1px solid black;
+            color: black;
+        }
+        .mainView{
+            display: flex;
+        }
+    </style>
+    <script src="d3.js"></script>
+
+</head>
+<body>
+  <h2>Mini Project 1 - Visualization 2</h2>
+  <div class="mainView">
+      <div>
+          <h2 class="received">Received Amount by the Countries</h2>
+          <svg id="receivedMap"></svg>
+      </div>
+      <div>
+          <h2 class="donated">Donated Amount by the Countries</h2>
+          <svg id="Map"></svg>
+      </div>
+  </div>
+</body>
+<script>
+let body = d3.select("#map")
+let body2 = d3.select("#receivedMap")
+var legendtext = ["Maximum Amount", "Minimum Amount"];
+Promise.all([
+  d3.csv("Aid Data Countries - Aggregated.csv"),
+  d3.json("contries.geo.json")
+]).then(displayData)
+
+function displayData(datasources){
+  let Information_for_Map = datasources[1]
+  let data = datasources[0]
+  console.log(data)
+
+  let index_for_donations = {}
+  for (let i of data){
+    let country = i.country
+    index_for_donations[country] = +i.donated
+  }
+  console.log(index_for_donations)
+
+  let index_for_recipients = {}
+  for (let s of data){
+    let country = s.country
+    index_for_recipients[country] = +s.received
+  }
+  console.log(index_for_recipients)
+
+  Information_for_Map.features = Information_for_Map.features.map(d => { 
+    let country = d.properties.name;
+    let donated = index_for_donations[country]
+    let received = index_for_recipients[country]
+    d.properties.Donated = donated;
+    d.properties.Received = received; 
+    return d;
+
+  })
+  console.log(Information_for_Map)
+
+  let maxDonation = d3.max(Information_for_Map.features, d => d.properties.Donated)
+  let medianDonation = d3.median(Information_for_Map.features, d => d.properties.Donated)
+
+  let maxReceived = d3.max(Information_for_Map.features, d => d.properties.Received)
+  let medianReceived = d3.median(Information_for_Map.features, d => d.properties.Received)
+
+  let dScale = d3.scaleLinear()
+  .domain([0, maxDonation])
+  .range(["#f4020a", "white"])
+
+  let rScale = d3.scaleLinear()
+  .domain([0, maxReceived])
+  .range(["#a702f4", "white"])
+
+  let width = 600
+  let height = 400
+  console.log(maxDonation)
+
+  let recieved_container = d3.select("#receivedMap");
+     recieved_container
+        .attr("width", width)
+    recieved_container
+        .attr("height", height)
+
+  let donor_container = d3.select("#map");
+     donor_container.attr("width", width)
+    donor_container.attr("height", height)
+   
+  var projection = d3.geoMercator()
+
+  projection.scale(97)
+            .translate([width / 2, height / 2 + 20])
+
+let path = d3.geoPath().projection(projection)
+
+body.selectAll("path").data(Information_for_Map.features)
+      .enter().append("path")
+      .attr("d", d => path(d))
+      .attr("stroke", "black")
+      .attr("fill",  
+        d => d.properties.Donated ? 
+        dScale(d.properties.Donated): "#c8c7c9"
+      )
+
+ body2.selectAll("path").data(Information_for_Map.features)
+      .enter().append("path")
+      .attr("d", d => path(d))
+      .attr("stroke", "black")
+      .attr("fill",  
+        d => d.properties.Received ? 
+        rScale(d.properties.Received): "#c8c7c9"
+      )
+      var color = d3.scale.threshold()
+    .domain([0, maxReceived])
+    .range(["white", "#a702f4"]);
+
+      var color2 = d3.scale.threshold()
+    .domain([0, maxDonation])
+    .range(["white", "#f4020a"]);
+    
+}
+</script>

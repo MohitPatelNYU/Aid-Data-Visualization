@@ -1,0 +1,275 @@
+<html>
+<head>
+    <style>
+        body {
+            font-family: Helvetica, Arial, sans-serif
+        }
+        h1 {
+            background-color: #07c8ef;
+            color: black;
+            padding: 5px;
+        }
+        h3.donor {
+            background-color: #f97277;
+            color: black;
+            padding: 5px;
+        }
+        h3.received {
+            background-color: #cc7bf2;
+            color: black;
+            padding: 5px;
+        }
+        svg {
+        border: 1px solid black;
+        }
+        .mainView {
+	         display: flex;
+	      }
+
+    </style>
+    <script src="d3.js"></script>
+</head>
+
+<body>
+    <h1>Mini Project 1 - Viusalization 1</h1>
+    <div class="mainView">
+        <h2><b></b></h2>
+        <div>
+            <h3 class="donor ">Countries Donating the amount</h3>
+            <svg id="DonorsGraph"></svg>
+        </div>
+        <div>
+            <h3 class="received">Countries Receiving the amount</h3>
+            <svg id="RecipientsGraph"></svg>
+        </div>
+    </div>
+</body>
+
+<script>
+      let body = d3.select("#DonorsGraph")
+      let body2 = d3.select("#RecipientsGraph")
+     let store = {}
+     function getData() {
+    return Promise.all([
+        d3.csv("aiddata.csv")
+    ]).then(datasets => {
+        store.data = datasets[0];
+        store.data2 = datasets[0];
+        return store;
+    })
+}
+
+      function groupedDonors(data) {
+          let donor_result = data.reduce((donor_result, d) => {
+              let currentData = donor_result[d.donor] || {
+                  "donor": d.donor,
+                  "donated_amount": d.commitment_amount_usd_constant
+              }
+              
+              donor_result[d.donor] = currentData
+              return donor_result;
+          }, {})
+
+          donor_result = Object.keys(donor_result).map(key => donor_result[key])
+          donor_result = donor_result.sort(function(x,y){
+            return d3.ascending(x.donor, y.donor);
+          });
+          return donor_result
+      }
+
+      function groupedRecipients(data2) {
+          let recipient_result = data2.reduce((recipient_result, d) => {
+              let currentData = recipient_result[d.recipient] || {
+                  "recipient": d.recipient,
+                  "received_amount": d.commitment_amount_usd_constant/10
+              }
+              
+              recipient_result[d.recipient] = currentData
+              return recipient_result;
+          }, {})
+
+          recipient_result = Object.keys(recipient_result).map(key => recipient_result[key])
+          recipient_result = recipient_result.sort(function(x,y){
+            return d3.ascending(x.recipient, y.recipient);
+          });
+          return recipient_result
+      }
+
+
+      function displayData() {
+          let data = store.data
+          let data2 = store.data
+          let var_donors = groupedDonors(store.data);
+          console.log(var_donors)
+          let var_recipients = groupedRecipients(store.data2);
+          console.log(var_recipients)
+          displayDonors(var_donors)
+          displayRecipients(var_recipients)
+        }
+
+      function displayDonors(var_donors) {
+          let config = donorsConfiguration()
+          let scales = donorScales(var_donors, config);
+          donorBars(var_donors, scales, config);
+          donorAxes(var_donors, scales, config);
+      }
+
+      function displayRecipients(var_recipients) {
+          let config = recipientsConfiguration()
+          let scales = recipientScales(var_recipients, config);
+          recipientBars(var_recipients, scales, config);
+          recipientAxes(var_recipients, scales, config);
+      }
+
+      function donorsConfiguration() {
+          let width = 600;
+          let height = 425;
+          let margin = {
+              top: 10,
+              bottom: 50,
+              left: 110,
+              right: 10
+          }
+
+          let bodyHeight = height - margin.top - margin.bottom
+          let bodyWidth = width - margin.left - margin.right
+          let container = d3.select("#DonorsGraph")
+          container
+              .attr("width", width)
+              .attr("height", height)
+          return { width, height, margin, bodyHeight, bodyWidth, container }
+      }
+
+      function recipientsConfiguration() {
+          let width = 600;
+          let height = 425;
+          let margin = {
+              top: 10,
+              bottom: 50,
+              left: 110,
+              right: 10
+          }
+
+          let bodyHeight = height - margin.top - margin.bottom
+          let bodyWidth = width - margin.left - margin.right
+          let container = d3.select("#RecipientsGraph")
+          container
+              .attr("width", width)
+              .attr("height", height)
+          return { width, height, margin, bodyHeight, bodyWidth, container }
+      }
+
+      function donorScales(var_donors, config) {
+          let { bodyWidth, bodyHeight } = config;
+          let maximunSum = d3.max(var_donors, d => d.donated_amount)
+          console.log(maximunSum)
+          let xScale = d3.scaleLinear()
+          			.range([0, bodyWidth])
+          			.domain([0, maximunSum*100000])
+
+          let yScale = d3.scaleBand()
+              .range([0, bodyHeight])
+              .domain(var_donors.map(a => a.donor))
+              .padding(0.2)
+
+          return { xScale, yScale }
+      }
+
+      function recipientScales(var_recipients, config) {
+          let { bodyWidth, bodyHeight } = config;
+          let maximunSum = d3.max(var_recipients, d => d.received_amount)
+          console.log(maximunSum)
+          let xScale = d3.scaleLinear()
+                .range([0, bodyWidth])
+                .domain([0, maximunSum])
+
+          let yScale = d3.scaleBand()
+              .range([0, bodyHeight])
+              .domain(var_recipients.map(a => a.recipient))
+              .padding(0.2)
+
+          return { xScale, yScale }
+      }
+
+      function donorBars(var_donors, scales, config) {
+        let {margin, container} = config;
+        let {xScale, yScale} = scales
+        let { bodyWidth } = config;
+        let body = container.append("g")
+            .style("transform",
+              `translate(${margin.left}px,${margin.top}px)`
+            )
+
+        let bars = body.selectAll(".bar")
+        			.data(var_donors)
+
+      console.log (xScale)
+        bars.enter().append("rect")
+            .attr("height", yScale.bandwidth())
+            .attr("width", (d) => xScale(d.donated_amount))
+            .attr("y", (d) => yScale(d.donor))
+            .attr("fill", "red")
+      }
+
+      function recipientBars(var_recipients, scales, config) {
+        let {margin, container} = config;
+        let {xScale, yScale} = scales
+        let { bodyWidth } = config;
+        let body = container.append("g")
+            .style("transform",
+              `translate(${margin.left}px,${margin.top}px)`
+            )
+
+        let bars = body.selectAll(".bar").data(var_recipients)
+
+      console.log (xScale)
+        bars.enter().append("rect")
+            .attr("height", yScale.bandwidth())
+            .attr("width", (d) => xScale(d.received_amount))
+            .attr("y", (d) => yScale(d.recipient))
+            .attr("fill", "purple")
+      }
+
+      function donorAxes(var_donors, scales, config){
+        let {xScale, yScale} = scales
+        let {container, margin, height} = config;
+        let axisX = d3.axisBottom(xScale)
+                      .ticks(5)
+
+        container.append("g")
+          .style("transform",
+              `translate(${margin.left}px,${height - margin.bottom}px)`
+          )
+          .call(axisX)
+
+        let axisY = d3.axisLeft(yScale) 
+          container.append("g")
+          .style("transform",
+              `translate(${margin.left}px,${margin.top}px)`
+          )
+          .call(axisY)
+      }
+ 
+      function recipientAxes(var_recipients, scales, config){
+        let {xScale, yScale} = scales
+        let {container, margin, height} = config;
+        let axisX = d3.axisBottom(xScale)
+                      .ticks(5)
+
+        container.append("g")
+          .style("transform",
+              `translate(${margin.left}px,${height - margin.bottom}px)`
+          )
+          .call(axisX)
+
+        let axisY = d3.axisLeft(yScale) 
+          container.append("g")
+          .style("transform",
+              `translate(${margin.left}px,${margin.top}px)`
+          )
+          .call(axisY)
+      }      
+
+      getData().then(displayData);
+</script>
+</html>

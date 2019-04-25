@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+
+	<style>
+		svg {	
+			background: black;
+		}
+		h2
+		{
+			color: white;
+		}
+		.mesh {
+			fill:none;
+			stroke: black;
+			stroke-width: 0.5px;
+		}
+		
+		.land {
+			fill: white;
+				}
+		.A { background: #1f77b4;}
+		.B { background: #ff7f0e;}
+		.C { background: #2ca02c;}
+		.D { background: #d62728;}
+		.E { background: #9467bd;}
+
+		.key-dot {
+		    display: inline-block;
+		    height: 50px;
+		    margin-right: .5em;
+		    width: 50px;
+		    color: white;
+
+		}
+		.LEGEND_class{
+			font-size: 40px;
+			color: white;
+		}
+
+		.background_color
+		{
+			background-color: black;
+		}
+	</style>	
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<script src="https://d3js.org/topojson.v1.min.js"></script>	
+</head>
+<body class="background_color">
+	
+<h2><b>LEGEND</b></h2>
+     
+     <div class="LEGEND_class"> <b class="country-name"><span class="key-dot D"></span>Industrial Development</b> </div>
+     <div class="LEGEND_class"> <b class="country-name"><span class="key-dot E"></span>Rescheduling and Refinancing</b> </div>
+     <div class="LEGEND_class"> <b class="country-name"><span class="key-dot B"></span>Air Transport</b> </div>
+     <div class="LEGEND_class"> <b class="country-name"><span class="key-dot C"></span>Power Generation/non-Renewable Sources</b>
+      </div>
+      <div class="LEGEND_class"> <b class="country-name"><span class="key-dot A"></span>Rail Transport</b> </div>
+  </div>
+ </body> 
+    <script type="text/javascript">
+
+var width = 5700;
+	height = 1700;
+
+var svg = d3.select("body").append("svg")
+	.attr("width", width)
+	.attr("height", height);
+
+var projection = d3.geoMercator().center([81,22]).scale(800).translate([width/2,height/2]);
+var path = d3.geoPath().projection(projection);
+
+var g1 = svg.append("g");
+		
+ d3.json("https://unpkg.com/world-atlas@1/world/110m.json", function(error, world) {
+   
+	g1.insert("path", ".land")
+		.datum(topojson.feature(world, world.objects.countries))
+		.attr("class", "land")
+		.attr("d", path);
+		
+	 g1.append("path")
+      .datum(topojson.mesh(world, world.objects.countries, function(a, b) { return a !== b; }))
+      .attr("class", "mesh")
+      .attr("d", path);
+
+});
+
+var g2 = svg.append("g");
+
+var arc = d3.arc()
+			.innerRadius(0)
+			.outerRadius(70);
+			
+var pie = d3.pie()
+			.sort(null)
+			.value(function(d) { return d; });
+			
+var color = d3.schemeCategory10;
+console.log(color);
+
+d3.csv("data_for_visualization3.csv", function(error, water) {
+
+	var marks = g2.selectAll("g")
+		.data(water)
+		.enter()
+		.append("g")
+		.attr("transform",function(d) { return "translate("+projection([d.Long,d.Lat])+")" })
+		.attr("id", function (d,i) { return "chart"+i; })
+		.append("g").attr("class","pies");
+	
+	marks.append("circle")
+		.attr("r", 3)
+        .style("fill", "red");
+	
+	var pies = marks.selectAll(".pies")
+		.data(function(d) {console.log(d.data); return pie(d.data.split(['-'])); }) // I'm unsure why I need the leading 0.
+		.enter()
+		.append('g')
+		.attr('class','arc');
+	
+	pies.append("path")
+	  .attr('d',arc)
+      .attr("fill",function(d,i){
+           return color[i];      
+      });
+});
+</script>
+</body>
